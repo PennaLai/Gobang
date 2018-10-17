@@ -133,7 +133,7 @@ class AI(object):
         # print('Penna选择了',new_pos,'分数是', self.chess_mark[new_pos[0],new_pos[1]])
 
         # self.neighbor.pop(-1)
-        value, new_pos = alphabeta(position, self.neighbor, chessboard, self.chess_mark, 1, 1, -99999999,999999990, self.field, self.color)  # 一定要返回一个位置的值
+        value, new_pos = alphabeta(position, self.neighbor, chessboard, self.chess_mark, 2, self.color, -99999999,999999990, self.field, self.color)  # 一定要返回一个位置的值
         # print('the AI penna go',new1_pos)
         # 下完棋更新信息
         self.add_played_list(new_pos)

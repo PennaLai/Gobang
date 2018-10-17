@@ -21,30 +21,30 @@ score_judge = [
                (-200, [-1, 1, 1, 1, -1], 1, 0),
                (-200, [-1, 1, 1, -1], 1, 0),
                 # 眠二 落子成眠三
-               (10, [0, 0, 0, 1, 1, -1], 0, 0),
-               (10, [0, 0, 1, 0, 1, -1], 0, 0),
-               (10, [0, 1, 0, 0, 1, -1], 0, 0),
-               (10, [1, 0, 0, 0, 1], 1, 0),
-               (10, [-1, 0, 1, 0, 1, 0, -1], 1, 0),
-               (10, [-1, 0, 1, 1, 0, 0, -1], 0, 0),
+               (11, [0, 0, 0, 1, 1, -1], 0, 0),
+               (12, [0, 0, 1, 0, 1, -1], 0, 0),
+               (13, [0, 1, 0, 0, 1, -1], 0, 0),
+               (14, [1, 0, 0, 0, 1], 1, 0),
+               (15, [-1, 0, 1, 0, 1, 0, -1], 1, 0),
+               (16, [-1, 0, 1, 1, 0, 0, -1], 0, 0),
                 # 活二 落子能成活三
                (100, [0, 1, 0, 1, 0], 1, 0),
                (100, [0, 0, 1, 1, 0], 0, 0),
                (100, [0, 1, 0, 0, 1, 0], 1, 0),
                 # 眠三，落子能成冲四
-               (100, [0, 0, 1, 1, 1, -1], 0, 0),
-               (100, [0, 1, 0, 1, 1, -1], 0, 0),
-               (100, [0, 1, 1, 0, 1, -1], 0, 0),
-               (100, [1, 0, 0, 1, 1], 0, 0),
-               (100, [1, 0, 1, 0, 1], 1, 0),
-               (100, [-1, 0, 1, 1, 1, 0, -1], 1, 0),
+               (100, [0, 0, 1, 1, 1, -1], 0, 3),
+               (100, [0, 1, 0, 1, 1, -1], 0, 3),
+               (100, [0, 1, 1, 0, 1, -1], 0, 3),
+               (100, [1, 0, 0, 1, 1], 0, 3),
+               (100, [1, 0, 1, 0, 1], 1, 3),
+               (100, [-1, 0, 1, 1, 1, 0, -1], 1, 3),
                 # 活三
-               (1150, [0, 1, 0, 1, 1, 0], 0, 1),
-               (1150, [0, 1, 1, 1, 0, 0], 0, 1), # 这个很特殊，虽然一行可能回重复判断，但是下面写了最多返回一个双三
+               (1000, [0, 1, 0, 1, 1, 0], 0, 1),
+               (1000, [0, 1, 1, 1, 0, 0], 0, 1),  # 这个很特殊，虽然一行可能回重复判断，但是下面写了最多返回一个双三
                 # 冲四
-               (1100, [0, 1, 1, 1, 1, -1], 0, 2),
-               (1100, [1, 0, 1, 1, 1], 0, 2),
-               (1100, [1, 1, 0, 1, 1], 1, 2),
+               (1200, [0, 1, 1, 1, 1, -1], 0, 2),
+               (1200, [1, 0, 1, 1, 1], 0, 2),
+               (1200, [1, 1, 0, 1, 1], 1, 2),
                 # 一条线上的双冲四
                (12000, [1, 0, 1, 1, 1, 0, 1], 1, 0),
                 # 活四 必胜
@@ -53,7 +53,7 @@ score_judge = [
                (1500000, [1, 1, 1, 1, 1], 1, 0)]
 
 # 分数从高到低分别为 成五，活四，冲四，活三, 眠三，活二，眠二，死四，死三，死二
-# 第四个值为 0表示没有什么特殊的，1表示是活三 2表示冲四
+# 第四个值为 0表示没有什么特殊的，1表示是活三 2表示冲四, 3是眠三
 
 
 class AI(object):
@@ -175,7 +175,7 @@ def update_mark(position, chessboard, mark, field, color_main):
                 if color_main == 1:
                     mark[tempt[0], tempt[1]] = 1.1 * score + score1  #后手防守
                 else:
-                    mark[tempt[0], tempt[1]] = 1.3 * score + score1  # 先手进攻
+                    mark[tempt[0], tempt[1]] = 1.2 * score + score1  # 先手进攻
     mark[position[0], position[1]] = -999999  # 下过的点分数更新为-1，以后不会再用到
 
 def print_neighbor_mark(mark_table,neighbor_list):
@@ -275,6 +275,7 @@ def evalocal(size, position, chessboard, color):
     right_inc = []
     three = 0
     four = 0
+    dead_three = 0
     for i in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
         # row
         if x+i < 0:
@@ -313,17 +314,23 @@ def evalocal(size, position, chessboard, color):
         else:
             right_inc.append(chessboard[x+i][y-i])
 
-    a, b, c = one_row(row, color)
-    a1, b1, c1 = one_row(col, color)
-    a2, b2, c2 = one_row(left_inc, color)
-    a3, b3, c3 = one_row(right_inc, color)
+    a, b, c, d = one_row(row, color)
+    a1, b1, c1, d1 = one_row(col, color)
+    a2, b2, c2, d2 = one_row(left_inc, color)
+    a3, b3, c3, d3 = one_row(right_inc, color)
     total_score = total_score+a+a1+a2+a3
     three = b+b1+b2+b3
     four = c+c1+c2+c3
-    if three+four >= 2:
+    dead_three = d+d1+d2+d3
+    if four >= 2 or (four >= 1 and three >= 1):  # 冲四活三和双活三分支要大一点
         total_score += 12000
+    elif three >= 2:  # 活三分值小一点
+        total_score += 7000
+    elif four + three >= 2:
+        total_score += 1500
     else:
-        total_score += ((three+four) * 1100)
+        total_score += three * 1000
+        total_score += four * 1200
     return max(total_score, 8)
 
 # 根据得分表对neighbor从小到达排序
@@ -399,6 +406,7 @@ def one_row(row, color):
     total_score = 0
     live_three = 0  # 理论来说同一行最多一个活三？
     death_four = 0
+    death_three = 0
     for i in range(len(score_judge)):  # 所有的棋形
         cas = score_judge[i][1]  # 棋形
         score = score_judge[i][0]  # 分值
@@ -418,10 +426,13 @@ def one_row(row, color):
                 live_three += time
             elif case == 2:
                 death_four += time
+            elif case ==3:
+                death_three += time
             if live_three + death_four > 0: # 有可能出现同一行的冲四被当作活三的情况，其实一行最多一个冲四活三
-                live_three = 1
-                death_four = 0
-    return (total_score, min(live_three, 1), min(death_four, 1))
+                # 那就算冲四，因为是包含关系
+                live_three = 0
+                death_four = 1
+    return (total_score, min(live_three, 1), min(death_four, 1), min(death_three, 1))
 
 
 def KMP(st,P) -> int:
