@@ -1,5 +1,5 @@
 import numpy as np
-from main1 import AI as AI
+from main import AI as AI
 
 
 def display_chessboard(chessboard):
