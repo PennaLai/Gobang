@@ -8,7 +8,7 @@ import copy
 COLOR_BLACK=-1
 COLOR_WHITE=1
 COLOR_NONE=0
-random.seed(0)
+
 
 
 
@@ -21,16 +21,16 @@ score_judge = [
                (-200, [-1, 1, 1, 1, -1], 1, 0),
                (-200, [-1, 1, 1, -1], 1, 0),
                 # 眠二 落子成眠三
-               (11, [0, 0, 0, 1, 1, -1], 0, 0),
-               (12, [0, 0, 1, 0, 1, -1], 0, 0),
-               (13, [0, 1, 0, 0, 1, -1], 0, 0),
-               (14, [1, 0, 0, 0, 1], 1, 0),
-               (15, [-1, 0, 1, 0, 1, 0, -1], 1, 0),
-               (16, [-1, 0, 1, 1, 0, 0, -1], 0, 0),
+               (10, [0, 0, 0, 1, 1, -1], 0, 4),
+               (10, [0, 0, 1, 0, 1, -1], 0, 4),
+               (10, [0, 1, 0, 0, 1, -1], 0, 4),
+               (10, [1, 0, 0, 0, 1], 1, 4),
+               (10, [-1, 0, 1, 0, 1, 0, -1], 1, 4),
+               (10, [-1, 0, 1, 1, 0, 0, -1], 0, 4),
                 # 活二 落子能成活三
-               (100, [0, 1, 0, 1, 0], 1, 0),
-               (100, [0, 0, 1, 1, 0], 0, 0),
-               (100, [0, 1, 0, 0, 1, 0], 1, 0),
+               (100, [0, 1, 0, 1, 0], 1, 4),
+               (100, [0, 0, 1, 1, 0], 0, 4),
+               (100, [0, 1, 0, 0, 1, 0], 1, 4),
                 # 眠三，落子能成冲四
                (100, [0, 0, 1, 1, 1, -1], 0, 3),
                (100, [0, 1, 0, 1, 1, -1], 0, 3),
@@ -40,11 +40,11 @@ score_judge = [
                (100, [-1, 0, 1, 1, 1, 0, -1], 1, 3),
                 # 活三
                (1000, [0, 1, 0, 1, 1, 0], 0, 1),
-               (1000, [0, 1, 1, 1, 0, 0], 0, 1),  # 这个很特殊，虽然一行可能回重复判断，但是下面写了最多返回一个双三
+               (1000, [0, 1, 1, 1, 0, 0], 0, 1),  # 这个很特殊，虽然一行可能会重复判断，但是下面写了最多返回一个双三
                 # 冲四
-               (1200, [0, 1, 1, 1, 1, -1], 0, 2),
-               (1200, [1, 0, 1, 1, 1], 0, 2),
-               (1200, [1, 1, 0, 1, 1], 1, 2),
+               (1400, [0, 1, 1, 1, 1, -1], 0, 2),
+               (1400, [1, 0, 1, 1, 1], 0, 2),
+               (1400, [1, 1, 0, 1, 1], 1, 2),
                 # 一条线上的双冲四
                (12000, [1, 0, 1, 1, 1, 0, 1], 1, 0),
                 # 活四 必胜
@@ -53,7 +53,7 @@ score_judge = [
                (1500000, [1, 1, 1, 1, 1], 1, 0)]
 
 # 分数从高到低分别为 成五，活四，冲四，活三, 眠三，活二，眠二，死四，死三，死二
-# 第四个值为 0表示没有什么特殊的，1表示是活三 2表示冲四, 3是眠三
+# 第四个值为 0表示没有什么特殊的，1表示是活三 2表示冲四, 3是眠三 4代表有很多情况，可以random一下
 
 
 class AI(object):
@@ -77,6 +77,12 @@ class AI(object):
             self.neighbor = []
         tempt = np.where(np.zeros([self.chessboard_size, self.chessboard_size], dtype=int) == 0)
         self.field = set(list(zip(tempt[0], tempt[1])))
+        # 进攻防守因子
+        if self.color == -1:
+            self.attack = 1.2
+        else:
+            self.attack = 1.1
+        self.defence = 1
 
     # 初始化棋盘得分表
     def mark_init(self):
@@ -112,33 +118,48 @@ class AI(object):
         step = len(self.played_list)  # 一开始是零
         has_step = self.update_played_list(chessboard) # 更新过的playlist
         position = ()
-        # 对手下了棋后更新数据
+        # ==============================对手下了棋后更新数据===================================
         if step == 0 and has_step > 0:  # 处理残局
             if step < has_step:
                 while step < has_step:
                     pos = self.played_list[step]
                     update_neighbor(pos, self.neighbor, chessboard, self.field)
-                    update_mark(pos, chessboard, self.chess_mark, self.field, self.color)
+                    update_mark(pos, chessboard, self.chess_mark, self.field, self.color, self.attack, self.defence)
                     sort_neighbor(self.chess_mark, self.neighbor)
                     step += 1
                 position = self.played_list[-1]
         elif len(self.played_list) > 0:
             position = self.played_list[-1]
+            # 评估下对手上一步的分数，如果对面成了活三我们堵了也没用, 不如先冲一冲
+            last_point_score = evalocal(self.chessboard_size, position, chessboard, -self.color)
+            if 7000 < last_point_score < 12000:
+                self.attack = 2
+                self.defence = 0.19
+            else:
+                if self.color == -1:
+                    self.attack = 1.2
+                else:
+                    self.attack = 1
+                self.defence = 1
             update_neighbor(position, self.neighbor, chessboard, self.field)
-            update_mark(position, chessboard, self.chess_mark, self.field, self.color)
+            update_mark(position, chessboard, self.chess_mark, self.field, self.color, self.attack, self.defence)
             sort_neighbor(self.chess_mark, self.neighbor)
-        # 开始下棋
-        new_pos = self.neighbor[-1]  # 假设我们要下在这, 也就是最小最大的第一个假设
-        print_neighbor_mark(self.chess_mark,self.neighbor)
-        print('Penna选择了', new_pos, '分数是', self.chess_mark[new_pos[0],new_pos[1]])
 
-        # value, new_pos = alphabeta(position, self.neighbor, chessboard, self.chess_mark, 1, 1, -99999999,999999990, self.field, self.color)  # 一定要返回一个位置的值
+        # ======================= 一层评估下棋 =============================
+        new_pos = self.neighbor[-1]  # 假设我们要下在这, 也就是最小最大的第一个假设
+        print_neighbor_mark(self.chess_mark, self.neighbor)
+        print('Penna选择了', new_pos, '分数是', self.chess_mark[new_pos[0], new_pos[1]])
+        # ======================= alpha_beta ==============================
+        # value, new_pos = alphabeta(position, self.neighbor, chessboard, self.chess_mark, 2, self.color, -99999999,
+        #                            999999990, self.field, self.color)  # 一定要返回一个位置的值
+        # ======================= 确认棋子 更新信息 ==============================
+        print('Penna选择了', new_pos, '分数是', self.chess_mark[new_pos[0], new_pos[1]])
         # 下完棋更新信息
         self.add_played_list(new_pos)
-        # 因为系统是在我们这个function结束才加入棋子的，所以我们提前加
+        # 因为系统是在我们这个function结束才加入棋子的，所以我们提前加来评估
         chessboard[new_pos[0], new_pos[1]] = self.color
         update_neighbor(new_pos, self.neighbor, chessboard, self.field)
-        update_mark(new_pos, chessboard, self.chess_mark, self.field, self.color)
+        update_mark(new_pos, chessboard, self.chess_mark, self.field, self.color, self.attack, self.defence)
         sort_neighbor(self.chess_mark, self.neighbor)
         # 系统自己会变棋盘， 所以还是要拿出来的
         chessboard[new_pos[0], new_pos[1]] = COLOR_NONE
@@ -155,7 +176,7 @@ class AI(object):
 
 
 # 下了棋后，更新评估表的分数，中心包括自己加周边4个, 要传入评估表
-def update_mark(position, chessboard, mark, field, color_main):
+def update_mark(position, chessboard, mark, field, color_main, attack, defense):
     hori = np.arange(position[0] - 4, position[0] + 5, 1)
     vert = np.arange(position[1] - 4, position[1] + 5, 1)
     for h in hori:
@@ -171,11 +192,10 @@ def update_mark(position, chessboard, mark, field, color_main):
                 # if position[0] ==2 and position[1] ==1:
                 #     if h == 3 and v == 1:
                 #         print(score,' ',score1)
-
                 if color_main == 1:
-                    mark[tempt[0], tempt[1]] = 1.1 * score + score1  #后手防守
+                    mark[tempt[0], tempt[1]] = attack * score + defense * score1  #后手防守
                 else:
-                    mark[tempt[0], tempt[1]] = 1.2 * score + score1  # 先手进攻
+                    mark[tempt[0], tempt[1]] = attack * score + defense * score1  # 先手进攻
     mark[position[0], position[1]] = -999999  # 下过的点分数更新为-1，以后不会再用到
 
 def print_neighbor_mark(mark_table,neighbor_list):
@@ -205,9 +225,9 @@ def evaluator_total(size, chessboard, color):
 # 评估棋盘某个颜色总分数, 墙也算对手
 def evaluator(size, chessboard, color):
     total_score = 0
-    total_score = 0
     live_three = 0
     dead_four = 0
+    dead_three = 0
     # 对行和列进行评估
     row_sp = np.vsplit(chessboard, size)
     col_sp = np.hsplit(chessboard, size)
@@ -217,11 +237,12 @@ def evaluator(size, chessboard, color):
         for j in range(size):
             row.append(row_sp[i][0][j])
             col.append(col_sp[i][j][0])
-        a1, b1, c1 = one_row(col, color)
-        a2, b2, c2 = one_row(row, color)
+        a1, b1, c1, d1 = one_row(col, color)
+        a2, b2, c2, d2 = one_row(row, color)
         total_score = total_score + a1 + a2
         live_three = live_three + b1 + b2
         dead_four = dead_four + c1 + c2
+        dead_three = dead_three +d1 + d2
     # 对斜的进行评估
     for i in range(size-5+1):
         m = i
@@ -243,29 +264,34 @@ def evaluator(size, chessboard, color):
         right1_incline.append(-color)
         right2_incline.append(-color)
         if i == 0:  # 两两重叠多余, 只算其中一个(m 经过+1了)
-            a1, b1, c1 = one_row(left1_incline, color)
-            a2, b2, c2 = one_row(right1_incline, color)
-            total_score = total_score+ a1+a2
-            live_three = live_three+ b1+b2
-            dead_four += dead_four+c1+c2
+            a1, b1, c1, d1= one_row(left1_incline, color)
+            a2, b2, c2, d2 = one_row(right1_incline, color)
+            total_score = total_score+a1+a2
+            live_three = live_three+b1+b2
+            dead_four = dead_four+c1+c2
+            dead_three = dead_three+d1+d2
         else:
-            a1, b1, c1 = one_row(left1_incline, color)
-            a2, b2, c2 = one_row(left2_incline, color)
-            a3, b3, c3 = one_row(right1_incline, color)
-            a4, b4, c4 = one_row(right2_incline, color)
+            a1, b1, c1, d1 = one_row(left1_incline, color)
+            a2, b2, c2, d2 = one_row(left2_incline, color)
+            a3, b3, c3, d3 = one_row(right1_incline, color)
+            a4, b4, c4, d4 = one_row(right2_incline, color)
             total_score = total_score + a1 + a2 + a3 + a4
             live_three = live_three + b1 + b2 + b3 + b4
             dead_four = dead_four + c1 + c2 + c3 + c4
+            dead_three = dead_three + d1 + d2 + d3 + d4
         # 双三那几种情况分开来算
-    if live_three + dead_four >= 2 :
-        total_score += 11000
+    if dead_four >= 2 or (dead_four >= 1 and dead_three >= 1):  # 冲四活三和双活三分支要大一点
+        total_score += 13000
+    elif live_three >= 2:  # 活三分值小一点
+        total_score += 8000
     else:
-        total_score += live_three * 1100
-        total_score += dead_four * 1100
+        total_score += live_three * 1000
+        total_score += dead_four * 1200
+        total_score += dead_three * 100
     return total_score
 
 
-# 启发估值，只估值当前落子中心向外4个位置的值，返回一个值
+# 启发估值，只估值当前落子中心向外6个位置的值，返回一个值
 def evalocal(size, position, chessboard, color):
     x, y = position
     total_score = 0
@@ -273,10 +299,7 @@ def evalocal(size, position, chessboard, color):
     col = []
     left_inc = []
     right_inc = []
-    three = 0
-    four = 0
-    dead_three = 0
-    for i in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+    for i in [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]:
         # row
         if x+i < 0:
             if x+i == -1:
@@ -326,22 +349,24 @@ def evalocal(size, position, chessboard, color):
         total_score += 12000
     elif three >= 2:  # 活三分值小一点
         total_score += 7000
-    elif four + three >= 2:
-        total_score += 1500
+    elif three == 1 and dead_three == 1:  # 活三加死三, 总和分数大于死四
+        total_score += 1700
     else:
         total_score += three * 1000
         total_score += four * 1200
+        total_score += dead_three * 100
     return max(total_score, 8)
 
 # 根据得分表对neighbor从小到达排序
 def sort_neighbor(mark_table, neightbor_list):
     neightbor_list.sort(key=lambda x: mark_table[x[0], x[1]])
 
+
 # Alpha-Beta 函数搜索, alpha一开始负无穷， beta一开始正无穷， 同时返回一个位置回来, 一开始给一个敌方的值
 def alphabeta(point, neighbor, chessboard, mark_table, depth, maxmin_player, alpha, beta, field, color):
     return_pos = ()  # 待返回的东西
     # 启发分数到达一定，比如赢了那么大的分数，或者深度到了，就返回
-    if depth == 0 or mark_table[point[0], point[1]] > 12000:
+    if depth == 0 or mark_table[point[0], point[1]] >= 12000:
         return_pos = (point[0], point[1])
         return evaluator_total(len(chessboard), chessboard, color), return_pos
 
@@ -395,7 +420,6 @@ def alphabeta(point, neighbor, chessboard, mark_table, depth, maxmin_player, alp
                 break
         return best_value, return_pos
 
-
 # 让估值棋形换成黑棋估值
 def neg(a):
     return -a
@@ -408,6 +432,7 @@ def one_row(row, color):
     death_four = 0
     death_three = 0
     for i in range(len(score_judge)):  # 所有的棋形
+        r = random.uniform(0.95, 1.05)
         cas = score_judge[i][1]  # 棋形
         score = score_judge[i][0]  # 分值
         case = score_judge[i][3]  # 样例，是特殊的冲四活三还是什么
@@ -422,11 +447,13 @@ def one_row(row, color):
             time = KMP(row, cas)
             if case == 0:
                 total_score += time * score
+            if case == 4:  # 基本情况random一下
+                total_score += r * time * score
             if case == 1:
                 live_three += time
             elif case == 2:
                 death_four += time
-            elif case ==3:
+            elif case == 3:
                 death_three += time
             if live_three + death_four > 0: # 有可能出现同一行的冲四被当作活三的情况，其实一行最多一个冲四活三
                 # 那就算冲四，因为是包含关系
@@ -471,5 +498,6 @@ def nextval(P):
                 k=nt[nt[k-1]]
         nt.append(k)
     return nt
+
 
 
