@@ -1,5 +1,5 @@
 import numpy as np
-import random
+# import random
 import time
 import copy
 
@@ -130,7 +130,7 @@ class AI(object):
                 position = self.played_list[-1]
         elif len(self.played_list) > 0:
             position = self.played_list[-1]
-            # 评估下对手上一步的分数，如果对面成了活三我们堵了也没用, 不如先冲一冲
+            # 评估下对手上一步的分数，如果对面成了双活三我们堵了也没用, 不如先冲一冲
             last_point_score = evalocal(self.chessboard_size, position, chessboard, -self.color)
             if 7000 < last_point_score < 12000:
                 self.attack = 2
@@ -148,7 +148,6 @@ class AI(object):
         # ======================= 一层评估下棋 =============================
         new_pos = self.neighbor[-1]  # 假设我们要下在这, 也就是最小最大的第一个假设
         print_neighbor_mark(self.chess_mark, self.neighbor)
-        print('Penna选择了', new_pos, '分数是', self.chess_mark[new_pos[0], new_pos[1]])
         # ======================= alpha_beta ==============================
         # value, new_pos = alphabeta(position, self.neighbor, chessboard, self.chess_mark, 2, self.color, -99999999,
         #                            999999990, self.field, self.color)  # 一定要返回一个位置的值
@@ -177,8 +176,8 @@ class AI(object):
 
 # 下了棋后，更新评估表的分数，中心包括自己加周边4个, 要传入评估表
 def update_mark(position, chessboard, mark, field, color_main, attack, defense):
-    hori = np.arange(position[0] - 4, position[0] + 5, 1)
-    vert = np.arange(position[1] - 4, position[1] + 5, 1)
+    hori = np.arange(position[0] - 6, position[0] + 7, 1)
+    vert = np.arange(position[1] - 6, position[1] + 7, 1)
     for h in hori:
         for v in vert:
             tempt = (h, v)
@@ -281,9 +280,9 @@ def evaluator(size, chessboard, color):
             dead_three = dead_three + d1 + d2 + d3 + d4
         # 双三那几种情况分开来算
     if dead_four >= 2 or (dead_four >= 1 and dead_three >= 1):  # 冲四活三和双活三分支要大一点
-        total_score += 13000
+        total_score += 12000
     elif live_three >= 2:  # 活三分值小一点
-        total_score += 8000
+        total_score += 7000
     else:
         total_score += live_three * 1000
         total_score += dead_four * 1200
@@ -345,9 +344,9 @@ def evalocal(size, position, chessboard, color):
     three = b+b1+b2+b3
     four = c+c1+c2+c3
     dead_three = d+d1+d2+d3
-    if four >= 2 or (four >= 1 and three >= 1):  # 冲四活三和双活三分支要大一点
+    if four >= 2 or (four >= 1 and three >= 1):  # 冲四活三和双冲四分支要大一点
         total_score += 12000
-    elif three >= 2:  # 活三分值小一点
+    elif three >= 2:  # 双活三分值小一点
         total_score += 7000
     elif three == 1 and dead_three == 1:  # 活三加死三, 总和分数大于死四
         total_score += 1700
@@ -432,7 +431,7 @@ def one_row(row, color):
     death_four = 0
     death_three = 0
     for i in range(len(score_judge)):  # 所有的棋形
-        r = random.uniform(0.95, 1.05)
+        # r = random.uniform(0.95, 1.05)
         cas = score_judge[i][1]  # 棋形
         score = score_judge[i][0]  # 分值
         case = score_judge[i][3]  # 样例，是特殊的冲四活三还是什么
@@ -448,7 +447,7 @@ def one_row(row, color):
             if case == 0:
                 total_score += time * score
             if case == 4:  # 基本情况random一下
-                total_score += r * time * score
+                total_score += time * score
             if case == 1:
                 live_three += time
             elif case == 2:
