@@ -32,19 +32,19 @@ score_judge = [
                (100, [0, 0, 1, 1, 0], 0, 4),
                (100, [0, 1, 0, 0, 1, 0], 1, 4),
                 # 眠三，落子能成冲四
-               (100, [0, 0, 1, 1, 1, -1], 0, 3),
-               (100, [0, 1, 0, 1, 1, -1], 0, 3),
-               (100, [0, 1, 1, 0, 1, -1], 0, 3),
-               (100, [1, 0, 0, 1, 1], 0, 3),
-               (100, [1, 0, 1, 0, 1], 1, 3),
-               (100, [-1, 0, 1, 1, 1, 0, -1], 1, 3),
+               (110, [0, 0, 1, 1, 1, -1], 0, 3),
+               (110, [0, 1, 0, 1, 1, -1], 0, 3),
+               (110, [0, 1, 1, 0, 1, -1], 0, 3),
+               (110, [1, 0, 0, 1, 1], 0, 3),
+               (110, [1, 0, 1, 0, 1], 1, 3),
+               (110, [-1, 0, 1, 1, 1, 0, -1], 1, 3),
                 # 活三
                (1000, [0, 1, 0, 1, 1, 0], 0, 1),
                (1000, [0, 1, 1, 1, 0, 0], 0, 1),  # 这个很特殊，虽然一行可能会重复判断，但是下面写了最多返回一个双三
                 # 冲四
                (1400, [0, 1, 1, 1, 1, -1], 0, 2),
-               (1400, [1, 0, 1, 1, 1], 0, 2),
-               (1400, [1, 1, 0, 1, 1], 1, 2),
+               (1300, [1, 0, 1, 1, 1], 0, 2),
+               (1300, [1, 1, 0, 1, 1], 1, 2),
                 # 一条线上的双冲四
                (12000, [1, 0, 1, 1, 1, 0, 1], 1, 0),
                 # 活四 必胜
@@ -79,9 +79,9 @@ class AI(object):
         self.field = set(list(zip(tempt[0], tempt[1])))
         # 进攻防守因子
         if self.color == -1:
-            self.attack = 1.2
+            self.attack = 1.3
         else:
-            self.attack = 1.1
+            self.attack = 1.3
         self.defence = 1
 
     # 初始化棋盘得分表
@@ -182,15 +182,17 @@ def update_mark(position, chessboard, mark, field, color_main, attack, defense):
         for v in vert:
             tempt = (h, v)
             if tempt in field and chessboard[tempt[0], tempt[1]] == 0:
+                # 我方的分数
                 chessboard[tempt[0], tempt[1]] = color_main
                 score = evalocal(len(chessboard), (h, v), chessboard, color_main)
+                # 对方的分数
                 chessboard[tempt[0], tempt[1]] = -color_main
                 score1 = evalocal(len(chessboard), (h, v), chessboard, -color_main)
                 chessboard[tempt[0], tempt[1]] = 0
-                # test 打印当下了某个点后，另外某个点的评分
-                # if position[0] ==2 and position[1] ==1:
-                #     if h == 3 and v == 1:
-                #         print(score,' ',score1)
+                # 测试使用 打印当下了某个点后，另外某个点的评分
+                # if position[0] ==8 and position[1] ==3:
+                #     if h == 8 and v == 1:
+                #         print(score, ' ', score1)
                 if color_main == 1:
                     mark[tempt[0], tempt[1]] = attack * score + defense * score1  #后手防守
                 else:
@@ -281,16 +283,16 @@ def evaluator(size, chessboard, color):
         # 双三那几种情况分开来算
     if dead_four >= 2 or (dead_four >= 1 and dead_three >= 1):  # 冲四活三和双活三分支要大一点
         total_score += 12000
-    elif live_three >= 2:  # 活三分值小一点
+    elif live_three >= 2:  # 双活三分值小一点
         total_score += 7000
     else:
         total_score += live_three * 1000
-        total_score += dead_four * 1200
-        total_score += dead_three * 100
+        total_score += dead_four * 1100
+        total_score += dead_three * 120
     return total_score
 
 
-# 启发估值，只估值当前落子中心向外6个位置的值，返回一个值
+# 启发估值，只估值当前落子中心向外4个位置的值，返回一个值
 def evalocal(size, position, chessboard, color):
     x, y = position
     total_score = 0
@@ -298,7 +300,7 @@ def evalocal(size, position, chessboard, color):
     col = []
     left_inc = []
     right_inc = []
-    for i in [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]:
+    for i in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
         # row
         if x+i < 0:
             if x+i == -1:
@@ -344,6 +346,7 @@ def evalocal(size, position, chessboard, color):
     three = b+b1+b2+b3
     four = c+c1+c2+c3
     dead_three = d+d1+d2+d3
+
     if four >= 2 or (four >= 1 and three >= 1):  # 冲四活三和双冲四分支要大一点
         total_score += 12000
     elif three >= 2:  # 双活三分值小一点
@@ -352,8 +355,12 @@ def evalocal(size, position, chessboard, color):
         total_score += 1700
     else:
         total_score += three * 1000
-        total_score += four * 1200
-        total_score += dead_three * 100
+        total_score += four * 1100
+        total_score += dead_three * 120
+    # 测试使用
+    # if (position[0] == 8 and position[1] == 1):
+    #     print(row,col,left_inc,right_inc)
+    #     print(total_score,'three',three,'four',four,'dead_three',dead_three)
     return max(total_score, 8)
 
 # 根据得分表对neighbor从小到达排序
@@ -446,7 +453,7 @@ def one_row(row, color):
             time = KMP(row, cas)
             if case == 0:
                 total_score += time * score
-            if case == 4:  # 基本情况random一下
+            if case == 4:  # 需要random的基本情况
                 total_score += time * score
             if case == 1:
                 live_three += time
@@ -454,7 +461,7 @@ def one_row(row, color):
                 death_four += time
             elif case == 3:
                 death_three += time
-            if live_three + death_four > 0: # 有可能出现同一行的冲四被当作活三的情况，其实一行最多一个冲四活三
+            if live_three > 0 and death_four > 0:  # 有可能出现同一行的冲四被当作活三的情况，其实一行最多一个冲四活三
                 # 那就算冲四，因为是包含关系
                 live_three = 0
                 death_four = 1
@@ -465,7 +472,7 @@ def KMP(st,P) -> int:
     if len(st) < len(P):
         return 0
     nt = nextval(P)
-    s, q, k=0, 0, 0# s,q是当前匹配位置,k是匹配开始位置,都是从0开始
+    s, q, k = 0, 0, 0# s,q是当前匹配位置,k是匹配开始位置,都是从0开始
     count = 0
     while k < len(st)-len(P)+1:
         q, s = 0, k
