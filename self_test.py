@@ -58,7 +58,7 @@ def play(chessboard, chess, inChess):
 
 
 if __name__ == '__main__':
-    AI_COLOR = -1
+    AI_COLOR = 1
     import_test_case(-AI_COLOR)
     chessboard = np.zeros([15, 15], dtype=int)
     # start with black chess
