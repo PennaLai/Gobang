@@ -1,7 +1,7 @@
 import numpy as np
-from main1 import AI as AI
+from main import AI as AI
 
-testList =[]
+testList = []
 def import_test_case(color):
     file = open("sample.txt")
     i = 1
@@ -58,7 +58,7 @@ def play(chessboard, chess, inChess):
 
 
 if __name__ == '__main__':
-    AI_COLOR = -1
+    AI_COLOR = 1
     import_test_case(-AI_COLOR)
     chessboard = np.zeros([15, 15], dtype=int)
     # start with black chess
